@@ -28,7 +28,7 @@ export default function MapView({
   const selected = pharmacies.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <div className="map-wrap">
+    <div className="map-wrap" id="rx-map">
       <Map
         mapId={MAP_ID}
         defaultCenter={{ lat: center.lat, lng: center.lng }}

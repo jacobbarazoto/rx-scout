@@ -18,6 +18,8 @@ export interface KrogerProduct {
 export interface KrogerStore {
   name: string;
   address: string;
+  lat?: number | null;
+  lng?: number | null;
   products: KrogerProduct[];
 }
 

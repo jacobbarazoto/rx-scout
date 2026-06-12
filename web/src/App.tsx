@@ -55,6 +55,15 @@ export default function App() {
     };
   }, [result]);
 
+  // Select a pharmacy pin (highlights it + opens its map popup) and scroll the
+  // map into view — used by the Kroger "Show on map" links.
+  const showOnMap = (pharmacyId: string) => {
+    setSelectedId(pharmacyId);
+    requestAnimationFrame(() =>
+      document.getElementById("rx-map")?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+    );
+  };
+
   const handleSearch = async (medication: Medication, location: GeoLocation) => {
     setBusy(true);
     setError("");
@@ -95,7 +104,14 @@ export default function App() {
               <ShortageBanner drugName={result.medication.name} status={result.shortage} />
               {result.isOtc && <OtcBanner drugName={result.medication.name} />}
             </div>
-            {result.isOtc && <KrogerStock stores={krogerStores} loading={krogerLoading} />}
+            {result.isOtc && (
+              <KrogerStock
+                stores={krogerStores}
+                loading={krogerLoading}
+                pharmacies={result.pharmacies}
+                onShowOnMap={showOnMap}
+              />
+            )}
 
             <div className="results-head">
               <h2>

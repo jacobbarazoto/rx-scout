@@ -86,6 +86,8 @@ export default {
             address: [store.address?.addressLine1, store.address?.city, store.address?.state]
               .filter(Boolean)
               .join(", "),
+            lat: store.geolocation?.latitude ?? null,
+            lng: store.geolocation?.longitude ?? null,
             products,
           });
         }
