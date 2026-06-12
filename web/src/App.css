@@ -238,9 +238,7 @@
 }
 .pharmacy-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
   padding: 0.8rem 0.95rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -249,6 +247,12 @@
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
+}
+.pharmacy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
 }
 .pharmacy-card:hover {
   border-color: var(--accent);
@@ -289,6 +293,50 @@
   font-size: 0.76rem;
   color: var(--muted);
   margin-top: 0.25rem;
+}
+
+/* Contact details (selected card + map info window) */
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.rating {
+  color: #bf8700;
+  font-weight: 600;
+}
+.contact-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.contact-link:hover {
+  text-decoration: underline;
+}
+
+/* Map info window */
+.iw {
+  font-size: 0.88rem;
+  max-width: 240px;
+}
+.iw-addr {
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.iw-stock {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.iw .contact {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 /* Map */

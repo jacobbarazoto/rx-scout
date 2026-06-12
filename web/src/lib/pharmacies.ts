@@ -54,7 +54,15 @@ async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
 
   try {
     const { places: results } = await places.Place.searchNearby({
-      fields: ["id", "displayName", "formattedAddress", "location"],
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "nationalPhoneNumber",
+        "rating",
+        "googleMapsURI",
+      ],
       locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius: 8000 },
       includedPrimaryTypes: ["pharmacy", "drugstore"],
       maxResultCount: 15,
@@ -69,6 +77,9 @@ async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
         address: r.formattedAddress ?? "",
         lat: r.location!.lat(),
         lng: r.location!.lng(),
+        phone: r.nationalPhoneNumber ?? undefined,
+        rating: r.rating ?? undefined,
+        mapsUri: r.googleMapsURI ?? undefined,
       }));
   } catch {
     return null; // Quota/permission/API errors → fall back to mock.
@@ -91,7 +102,18 @@ export function mockPharmaciesNear(loc: GeoLocation, count = 8): Pharmacy[] {
       address: `${streetNo} ${STREETS[i % STREETS.length]}`,
       lat,
       lng,
+      phone: mockPhone(i),
+      rating: Math.round((3.4 + ((i * 7) % 16) / 10) * 10) / 10, // 3.4–4.9
+      mapsUri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
     });
   }
   return out;
+}
+
+/** Deterministic, plausible US phone number for a mock pharmacy. */
+function mockPhone(i: number): string {
+  const area = 200 + ((i * 53) % 700); // 200–899
+  const prefix = 200 + ((i * 97) % 700);
+  const line = (i * 1234 + 5678) % 10000;
+  return `(${area}) ${prefix}-${String(line).padStart(4, "0")}`;
 }

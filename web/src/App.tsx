@@ -78,6 +78,7 @@ export default function App() {
                   pharmacies={result.pharmacies}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
+                  onClose={() => setSelectedId(null)}
                 />
               )}
             </div>
