@@ -7,11 +7,13 @@ import type {
   ShortageStatus,
 } from "./types";
 import { getShortageStatus } from "./lib/openfda";
+import { getOtcStatus } from "./lib/otc";
 import { findPharmacies, placesAvailable } from "./lib/pharmacies";
 import { simulateAvailability } from "./lib/availability";
 import Header from "./components/Header";
 import SearchBar from "./components/SearchBar";
 import ShortageBanner from "./components/ShortageBanner";
+import OtcBanner from "./components/OtcBanner";
 import PharmacyList from "./components/PharmacyList";
 import MapView from "./components/MapView";
 import TransferModal from "./components/TransferModal";
@@ -22,6 +24,7 @@ interface SearchResult {
   location: GeoLocation;
   shortage: ShortageStatus;
   pharmacies: PharmacyResult[];
+  isOtc: boolean;
 }
 
 export default function App() {
@@ -35,9 +38,10 @@ export default function App() {
     setBusy(true);
     setError("");
     try {
-      // Real FDA shortage status and nearby pharmacies, in parallel.
-      const [shortage, pharmacies] = await Promise.all([
+      // Real FDA shortage status, OTC status, and nearby pharmacies, in parallel.
+      const [shortage, otc, pharmacies] = await Promise.all([
         getShortageStatus(medication.name),
+        getOtcStatus(medication.name),
         findPharmacies(location),
       ]);
 
@@ -47,7 +51,7 @@ export default function App() {
         availability: simulateAvailability(p.id, medication.name, shortage.inShortage),
       }));
 
-      setResult({ medication, location, shortage, pharmacies: withStock });
+      setResult({ medication, location, shortage, pharmacies: withStock, isOtc: otc.isOtc });
       setSelectedId(withStock[0]?.id ?? null);
     } catch (e) {
       setError((e as Error).message || "Something went wrong. Try again.");
@@ -67,6 +71,7 @@ export default function App() {
         {result && (
           <section className="results">
             <ShortageBanner drugName={result.medication.name} status={result.shortage} />
+            {result.isOtc && <OtcBanner drugName={result.medication.name} />}
 
             <div className="results-head">
               <h2>

@@ -227,6 +227,29 @@
   color: var(--muted);
 }
 
+/* OTC banner */
+.otc {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #aec9e8;
+  background: #eef4fc;
+  border-radius: 11px;
+  font-size: 0.92rem;
+}
+.otc-chip {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: #1f6feb;
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+}
+
 /* Pharmacy list */
 .pharmacy-list {
   list-style: none;
