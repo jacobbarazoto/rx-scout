@@ -1,48 +1,75 @@
 # rx-scout
 
-# Getting Started with Create React App
+Find which pharmacies near you are likely to have your prescription — with **real
+FDA drug-shortage data** layered on top of a nearby-pharmacy locator.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> **On "in stock":** there is no public, real-time API for per-store prescription
+> inventory (CVS, Walgreens, and GoodRx all gate or simply don't expose it). So
+> rx-scout pairs **real** national shortage data with a clearly-labeled
+> **simulated** per-pharmacy stock layer. Stock badges are deterministic and skew
+> toward scarcity when a drug is in a genuine FDA shortage, keeping the demo honest
+> and internally consistent.
 
-## Available Scripts
+## What's real vs. simulated
 
-In the project directory, you can run:
+| Data | Source | Real? |
+|------|--------|-------|
+| Medication search / autocomplete | [RxNorm / RxNav](https://rxnav.nlm.nih.gov) (NLM) | ✅ real, no key |
+| National drug shortage status | [openFDA Drug Shortages](https://open.fda.gov/apis/drug/drugshortages/) | ✅ real, no key |
+| ZIP → location | [zippopotam.us](https://api.zippopotam.us) | ✅ real, no key |
+| Nearby pharmacies | Google Places (when a key is set) | ✅ real *(optional)* |
+| Per-pharmacy stock levels | deterministic simulation | ⚠️ simulated |
 
-### `npm start`
+## Tech stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **React 18 + TypeScript + Vite** (the original Create React App scaffold was
+  broken — incompatible `react-scripts`, wrong Maps package — and was rebuilt).
+- **Google Maps** via `@vis.gl/react-google-maps` — *optional*. With no key, the
+  app runs entirely on mock pharmacy data and skips the map.
+- **Firebase Hosting** for deployment.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+The previous React + Django prototype is archived under [`legacy/`](legacy/).
 
-### `npm test`
+## Run locally
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```sh
+cd web
+npm install
+npm run dev          # http://localhost:5173
+```
 
-### `npm run build`
+Everything works with **zero configuration**. To enable the real map + real nearby
+pharmacies, copy `web/.env.example` to `web/.env` and add a Google Maps JavaScript
+API key (Places library enabled, restricted by HTTP referrer).
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```sh
+npm run build        # typecheck + production build → web/dist
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Deploy to Firebase Hosting
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+One-time setup:
 
-### `npm run eject`
+```sh
+npm install -g firebase-tools   # or use: npx firebase-tools <cmd>
+firebase login
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+The project is already wired to the `rx-scout` Firebase project (see `.firebaserc`).
+Then, from the repo root:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```sh
+cd web && npm run build && cd ..
+firebase deploy --only hosting
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Project layout
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+```
+web/                 React + Vite app
+  src/lib/           data layer (rxnorm, openfda, geo, pharmacies, availability)
+  src/components/    UI (SearchBar, ShortageBanner, PharmacyList, MapView, Header)
+firebase.json        Firebase Hosting config (serves web/dist as an SPA)
+.firebaserc          → Firebase project "rx-scout"
+legacy/              archived original CRA + Django prototype
+```
