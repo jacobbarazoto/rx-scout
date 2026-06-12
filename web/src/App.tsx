@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   GeoLocation,
   Medication,
@@ -8,12 +8,14 @@ import type {
 } from "./types";
 import { getShortageStatus } from "./lib/openfda";
 import { getOtcStatus } from "./lib/otc";
+import { getKrogerStock, type KrogerStore } from "./lib/kroger";
 import { findPharmacies, placesAvailable } from "./lib/pharmacies";
 import { simulateAvailability } from "./lib/availability";
 import Header from "./components/Header";
 import SearchBar from "./components/SearchBar";
 import ShortageBanner from "./components/ShortageBanner";
 import OtcBanner from "./components/OtcBanner";
+import KrogerStock from "./components/KrogerStock";
 import PharmacyList from "./components/PharmacyList";
 import MapView from "./components/MapView";
 import TransferModal from "./components/TransferModal";
@@ -33,6 +35,25 @@ export default function App() {
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transferTarget, setTransferTarget] = useState<Pharmacy | null>(null);
+  const [krogerStores, setKrogerStores] = useState<KrogerStore[]>([]);
+  const [krogerLoading, setKrogerLoading] = useState(false);
+
+  // For OTC drugs, look up real shelf stock at nearby Kroger-family stores.
+  useEffect(() => {
+    setKrogerStores([]);
+    if (!result?.isOtc) return;
+    const controller = new AbortController();
+    let active = true;
+    setKrogerLoading(true);
+    getKrogerStock(result.medication.name, result.location, controller.signal)
+      .then((stores) => active && setKrogerStores(stores))
+      .catch(() => {})
+      .finally(() => active && setKrogerLoading(false));
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [result]);
 
   const handleSearch = async (medication: Medication, location: GeoLocation) => {
     setBusy(true);
@@ -72,6 +93,7 @@ export default function App() {
           <section className="results">
             <ShortageBanner drugName={result.medication.name} status={result.shortage} />
             {result.isOtc && <OtcBanner drugName={result.medication.name} />}
+            {result.isOtc && <KrogerStock stores={krogerStores} loading={krogerLoading} />}
 
             <div className="results-head">
               <h2>
