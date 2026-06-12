@@ -46,7 +46,7 @@ export default function App() {
     let active = true;
     setKrogerLoading(true);
     getKrogerStock(result.medication.name, result.location, controller.signal)
-      .then((stores) => active && setKrogerStores(stores))
+      .then((stores) => active && setKrogerStores(stores.map((s, i) => ({ ...s, id: `kroger-${i}` }))))
       .catch(() => {})
       .finally(() => active && setKrogerLoading(false));
     return () => {
@@ -108,7 +108,7 @@ export default function App() {
               <KrogerStock
                 stores={krogerStores}
                 loading={krogerLoading}
-                pharmacies={result.pharmacies}
+                hasMap={placesAvailable()}
                 onShowOnMap={showOnMap}
               />
             )}
@@ -130,6 +130,7 @@ export default function App() {
                 <MapView
                   center={result.location}
                   pharmacies={result.pharmacies}
+                  krogerStores={krogerStores}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                   onClose={() => setSelectedId(null)}

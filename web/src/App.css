@@ -604,11 +604,15 @@
   color: var(--muted);
   margin-bottom: 0.5rem;
 }
-.iw-stock {
+.iw-stock,
+.iw-kroger {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.3rem;
+}
+.iw-kroger {
+  flex-wrap: wrap;
 }
 .iw .contact {
   margin-top: 0.5rem;

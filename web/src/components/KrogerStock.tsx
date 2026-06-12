@@ -1,14 +1,12 @@
 import type { KrogerStore } from "../lib/kroger";
-import type { PharmacyResult } from "../types";
-import { distanceMiles } from "../lib/geo";
 
 interface Props {
   stores: KrogerStore[];
   loading: boolean;
-  /** Pharmacy pins on the map, for matching a store to a marker. */
-  pharmacies: PharmacyResult[];
-  /** Select + highlight a pharmacy pin (and scroll the map into view). */
-  onShowOnMap: (pharmacyId: string) => void;
+  /** Whether a map is available to show the store on. */
+  hasMap: boolean;
+  /** Select the store's map marker (and scroll the map into view). */
+  onShowOnMap: (storeId: string) => void;
 }
 
 const STOCK_META: Record<string, { label: string; color: string }> = {
@@ -26,23 +24,8 @@ function tidyName(name: string) {
   return name.replace(/^(\S+) - \1/, "$1");
 }
 
-// Find the map pin closest to a store's coordinates, within ~0.3 mi.
-function matchPharmacy(store: KrogerStore, pharmacies: PharmacyResult[]): PharmacyResult | null {
-  if (store.lat == null || store.lng == null) return null;
-  let best: PharmacyResult | null = null;
-  let bestDist = Infinity;
-  for (const p of pharmacies) {
-    const d = distanceMiles({ lat: store.lat, lng: store.lng }, p);
-    if (d < bestDist) {
-      bestDist = d;
-      best = p;
-    }
-  }
-  return best && bestDist <= 0.3 ? best : null;
-}
-
 /** REAL shelf stock + price at nearby Kroger-family stores (OTC items only). */
-export default function KrogerStock({ stores, loading, pharmacies, onShowOnMap }: Props) {
+export default function KrogerStock({ stores, loading, hasMap, onShowOnMap }: Props) {
   if (loading) {
     return <p className="kroger-loading">Checking real stock at stores near you…</p>;
   }
@@ -51,22 +34,22 @@ export default function KrogerStock({ stores, loading, pharmacies, onShowOnMap }
   return (
     <div className="kroger">
       {stores.map((s, i) => {
-        const match = matchPharmacy(s, pharmacies);
+        const canMap = hasMap && s.id != null && s.lat != null && s.lng != null;
         return (
-          <details key={i} className="kroger-store">
+          <details key={s.id ?? i} className="kroger-store">
             <summary className="kroger-summary">
               <span className="kroger-badge">REAL STOCK</span>
               <span className="kroger-summary-text">
                 On the shelf at <strong>{tidyName(s.name)}</strong> near you
               </span>
-              {match && (
+              {canMap && (
                 <button
                   type="button"
                   className="kroger-maplink"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    onShowOnMap(match.id);
+                    onShowOnMap(s.id!);
                   }}
                 >
                   Show on map

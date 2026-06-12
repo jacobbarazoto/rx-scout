@@ -16,6 +16,8 @@ export interface KrogerProduct {
 }
 
 export interface KrogerStore {
+  /** Assigned client-side so the store can be selected as a map marker. */
+  id?: string;
   name: string;
   address: string;
   lat?: number | null;

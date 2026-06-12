@@ -1,11 +1,13 @@
 import { Map, AdvancedMarker, Pin, InfoWindow } from "@vis.gl/react-google-maps";
 import type { GeoLocation, Pharmacy, PharmacyResult } from "../types";
+import type { KrogerStore } from "../lib/kroger";
 import { AVAILABILITY_META } from "../lib/availability";
 import PharmacyContact from "./PharmacyContact";
 
 interface Props {
   center: GeoLocation;
   pharmacies: PharmacyResult[];
+  krogerStores: KrogerStore[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
@@ -20,12 +22,15 @@ const MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID || "DEMO_MAP_ID";
 export default function MapView({
   center,
   pharmacies,
+  krogerStores,
   selectedId,
   onSelect,
   onClose,
   onTransfer,
 }: Props) {
   const selected = pharmacies.find((p) => p.id === selectedId) ?? null;
+  const selectedKroger =
+    krogerStores.find((s) => s.id === selectedId && s.lat != null && s.lng != null) ?? null;
 
   return (
     <div className="map-wrap" id="rx-map">
@@ -78,6 +83,33 @@ export default function MapView({
                 )}
               </div>
               <PharmacyContact p={selected} onTransfer={onTransfer} />
+            </div>
+          </InfoWindow>
+        )}
+
+        {selectedKroger && (
+          <AdvancedMarker
+            position={{ lat: selectedKroger.lat!, lng: selectedKroger.lng! }}
+            zIndex={20}
+          >
+            <Pin background="#0b7285" borderColor="#ffffff" glyphColor="#ffffff" scale={1.3} />
+          </AdvancedMarker>
+        )}
+        {selectedKroger && (
+          <InfoWindow
+            position={{ lat: selectedKroger.lat!, lng: selectedKroger.lng! }}
+            pixelOffset={[0, -46]}
+            onCloseClick={onClose}
+            headerContent={<strong>{selectedKroger.name.replace(/^(\S+) - \1/, "$1")}</strong>}
+          >
+            <div className="iw">
+              <div className="iw-addr">{selectedKroger.address}</div>
+              <div className="iw-kroger">
+                <span className="badge" style={{ background: "#1a7f37" }}>
+                  Real stock
+                </span>
+                <span className="qty">See the panel above for price &amp; aisle</span>
+              </div>
             </div>
           </InfoWindow>
         )}
