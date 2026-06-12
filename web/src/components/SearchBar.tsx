@@ -13,6 +13,7 @@ export default function SearchBar({ onSearch, busy }: Props) {
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
   const [suggestions, setSuggestions] = useState<Medication[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const [zip, setZip] = useState("");
   const [locError, setLocError] = useState("");
@@ -32,6 +33,7 @@ export default function SearchBar({ onSearch, busy }: Props) {
       try {
         setSuggestions(await searchMedications(q, controller.signal));
         setShowSuggestions(true);
+        setActiveIndex(-1); // reset highlight when fresh results arrive
       } catch {
         /* ignore transient autocomplete errors */
       }
@@ -46,6 +48,34 @@ export default function SearchBar({ onSearch, busy }: Props) {
     setSelectedMed(m);
     setMedText(m.name);
     setShowSuggestions(false);
+    setActiveIndex(-1);
+  };
+
+  // Keyboard navigation for the autocomplete dropdown.
+  const onMedKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % suggestions.length);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        break;
+      case "Enter":
+        // Only intercept Enter when a suggestion is highlighted; otherwise let
+        // the form submit and run the search.
+        if (activeIndex >= 0) {
+          e.preventDefault();
+          pickSuggestion(suggestions[activeIndex]);
+        }
+        break;
+      case "Escape":
+        setShowSuggestions(false);
+        setActiveIndex(-1);
+        break;
+    }
   };
 
   const useMyLocation = async () => {
@@ -97,13 +127,26 @@ export default function SearchBar({ onSearch, busy }: Props) {
             setMedText(e.target.value);
             setSelectedMed(null);
           }}
+          onKeyDown={onMedKeyDown}
           onFocus={() => suggestions.length && setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          role="combobox"
+          aria-expanded={showSuggestions && suggestions.length > 0}
+          aria-controls="med-suggestions"
+          aria-activedescendant={activeIndex >= 0 ? `med-opt-${activeIndex}` : undefined}
         />
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="suggestions" role="listbox">
-            {suggestions.map((m) => (
-              <li key={m.id} role="option" onMouseDown={() => pickSuggestion(m)}>
+          <ul className="suggestions" role="listbox" id="med-suggestions">
+            {suggestions.map((m, i) => (
+              <li
+                key={m.id}
+                id={`med-opt-${i}`}
+                role="option"
+                aria-selected={i === activeIndex}
+                className={i === activeIndex ? "active" : undefined}
+                onMouseEnter={() => setActiveIndex(i)}
+                onMouseDown={() => pickSuggestion(m)}
+              >
                 {m.name}
               </li>
             ))}

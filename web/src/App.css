@@ -134,7 +134,8 @@
   cursor: pointer;
   font-size: 0.92rem;
 }
-.suggestions li:hover {
+.suggestions li:hover,
+.suggestions li.active {
   background: #eef6f8;
 }
 
