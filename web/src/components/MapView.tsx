@@ -1,5 +1,5 @@
 import { Map, AdvancedMarker, Pin, InfoWindow } from "@vis.gl/react-google-maps";
-import type { GeoLocation, PharmacyResult } from "../types";
+import type { GeoLocation, Pharmacy, PharmacyResult } from "../types";
 import { AVAILABILITY_META } from "../lib/availability";
 import PharmacyContact from "./PharmacyContact";
 
@@ -9,6 +9,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
+  onTransfer: (p: Pharmacy) => void;
 }
 
 // A Map ID is required for Advanced Markers. Override via VITE_GOOGLE_MAP_ID;
@@ -16,7 +17,14 @@ interface Props {
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID || "DEMO_MAP_ID";
 
 /** Renders an interactive Google Map. Only mounted when a Maps key is set. */
-export default function MapView({ center, pharmacies, selectedId, onSelect, onClose }: Props) {
+export default function MapView({
+  center,
+  pharmacies,
+  selectedId,
+  onSelect,
+  onClose,
+  onTransfer,
+}: Props) {
   const selected = pharmacies.find((p) => p.id === selectedId) ?? null;
 
   return (
@@ -69,7 +77,7 @@ export default function MapView({ center, pharmacies, selectedId, onSelect, onCl
                   <span className="qty">{selected.availability.quantity} on hand*</span>
                 )}
               </div>
-              <PharmacyContact p={selected} />
+              <PharmacyContact p={selected} onTransfer={onTransfer} />
             </div>
           </InfoWindow>
         )}

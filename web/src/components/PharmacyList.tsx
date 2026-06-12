@@ -1,4 +1,4 @@
-import type { PharmacyResult } from "../types";
+import type { Pharmacy, PharmacyResult } from "../types";
 import { AVAILABILITY_META } from "../lib/availability";
 import PharmacyContact from "./PharmacyContact";
 
@@ -6,9 +6,10 @@ interface Props {
   pharmacies: PharmacyResult[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onTransfer: (p: Pharmacy) => void;
 }
 
-export default function PharmacyList({ pharmacies, selectedId, onSelect }: Props) {
+export default function PharmacyList({ pharmacies, selectedId, onSelect, onTransfer }: Props) {
   return (
     <ul className="pharmacy-list">
       {pharmacies.map((p) => {
@@ -41,7 +42,7 @@ export default function PharmacyList({ pharmacies, selectedId, onSelect }: Props
                 )}
               </div>
             </div>
-            {selected && <PharmacyContact p={p} />}
+            {selected && <PharmacyContact p={p} onTransfer={onTransfer} />}
           </li>
         );
       })}

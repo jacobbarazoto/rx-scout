@@ -1,5 +1,11 @@
 import { useState } from "react";
-import type { GeoLocation, Medication, PharmacyResult, ShortageStatus } from "./types";
+import type {
+  GeoLocation,
+  Medication,
+  Pharmacy,
+  PharmacyResult,
+  ShortageStatus,
+} from "./types";
 import { getShortageStatus } from "./lib/openfda";
 import { findPharmacies, placesAvailable } from "./lib/pharmacies";
 import { simulateAvailability } from "./lib/availability";
@@ -8,6 +14,7 @@ import SearchBar from "./components/SearchBar";
 import ShortageBanner from "./components/ShortageBanner";
 import PharmacyList from "./components/PharmacyList";
 import MapView from "./components/MapView";
+import TransferModal from "./components/TransferModal";
 import "./App.css";
 
 interface SearchResult {
@@ -22,6 +29,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [transferTarget, setTransferTarget] = useState<Pharmacy | null>(null);
 
   const handleSearch = async (medication: Medication, location: GeoLocation) => {
     setBusy(true);
@@ -71,6 +79,7 @@ export default function App() {
                 pharmacies={result.pharmacies}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
+                onTransfer={setTransferTarget}
               />
               {placesAvailable() && (
                 <MapView
@@ -79,6 +88,7 @@ export default function App() {
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                   onClose={() => setSelectedId(null)}
+                  onTransfer={setTransferTarget}
                 />
               )}
             </div>
@@ -102,6 +112,15 @@ export default function App() {
         Built by Jacob Barazoto · Data: openFDA, RxNorm
         {placesAvailable() ? ", Google Places" : ""}
       </footer>
+
+      {transferTarget && result && (
+        <TransferModal
+          destination={transferTarget}
+          medication={result.medication.name}
+          nearby={result.pharmacies}
+          onClose={() => setTransferTarget(null)}
+        />
+      )}
     </div>
   );
 }
