@@ -12,49 +12,68 @@ const STOCK_META: Record<string, { label: string; color: string }> = {
 };
 
 function stockMeta(level?: string | null) {
-  return (level && STOCK_META[level]) || { label: "Availability unknown", color: "#656d76" };
+  return (level && STOCK_META[level]) || { label: "Unknown", color: "#656d76" };
+}
+
+// Tidy duplicated brand prefixes, e.g. "Kroger - Kroger On the Rhine" → "Kroger On the Rhine".
+function tidyName(name: string) {
+  return name.replace(/^(\S+) - \1/, "$1");
 }
 
 /** REAL shelf stock + price at nearby Kroger-family stores (OTC items only). */
 export default function KrogerStock({ stores, loading }: Props) {
   if (loading) {
-    return <p className="kroger-loading">Checking real stock at Kroger stores near you…</p>;
+    return <p className="kroger-loading">Checking real stock at stores near you…</p>;
   }
   if (!stores.length) return null;
 
   return (
-    <section className="kroger">
-      <div className="kroger-head">
-        <span className="kroger-badge">REAL STOCK</span>
-        <h3>On the shelf at Kroger near you</h3>
-      </div>
+    <div className="kroger">
       {stores.map((s, i) => (
-        <div key={i} className="kroger-store">
-          <div className="kroger-store-name">{s.name}</div>
-          <div className="kroger-store-addr">{s.address}</div>
-          <ul className="kroger-products">
-            {s.products.map((p, j) => {
-              const meta = stockMeta(p.stockLevel);
-              return (
-                <li key={j}>
-                  <span className="kroger-prod">
-                    {p.description}
-                    {p.size ? ` · ${p.size}` : ""}
-                  </span>
-                  <span className="kroger-info">
-                    {p.price != null && <span className="kroger-price">${p.price.toFixed(2)}</span>}
-                    <span className="badge" style={{ background: meta.color }}>
-                      {meta.label}
-                    </span>
-                    {p.aisle && <span className="kroger-aisle">{p.aisle}</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <details key={i} className="kroger-store" open={i === 0}>
+          <summary className="kroger-summary">
+            <span className="kroger-badge">REAL STOCK</span>
+            <span className="kroger-summary-text">
+              On the shelf at <strong>{tidyName(s.name)}</strong> near you
+            </span>
+            <span className="kroger-chevron" aria-hidden />
+          </summary>
+          <div className="kroger-body">
+            <div className="kroger-store-addr">{s.address}</div>
+            <table className="kroger-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Aisle</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.products.map((p, j) => {
+                  const meta = stockMeta(p.stockLevel);
+                  return (
+                    <tr key={j}>
+                      <td>
+                        {p.description}
+                        {p.size ? <span className="kroger-size"> · {p.size}</span> : null}
+                      </td>
+                      <td>{p.price != null ? `$${p.price.toFixed(2)}` : "—"}</td>
+                      <td>
+                        <span className="badge" style={{ background: meta.color }}>
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td>{p.aisle || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="source-note">Source: Kroger Products API — live price &amp; inventory</p>
+          </div>
+        </details>
       ))}
-      <p className="source-note">Source: Kroger Products API — live price &amp; store inventory</p>
-    </section>
+    </div>
   );
 }

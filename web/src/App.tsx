@@ -91,8 +91,10 @@ export default function App() {
 
         {result && (
           <section className="results">
-            <ShortageBanner drugName={result.medication.name} status={result.shortage} />
-            {result.isOtc && <OtcBanner drugName={result.medication.name} />}
+            <div className="banners">
+              <ShortageBanner drugName={result.medication.name} status={result.shortage} />
+              {result.isOtc && <OtcBanner drugName={result.medication.name} />}
+            </div>
             {result.isOtc && <KrogerStock stores={krogerStores} loading={krogerLoading} />}
 
             <div className="results-head">

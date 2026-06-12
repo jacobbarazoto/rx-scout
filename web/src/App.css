@@ -165,6 +165,23 @@
   align-items: start;
 }
 
+/* Banners row — shortage + OTC side-by-side, 50/50 */
+.banners {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+.results .banners > * {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+@media (max-width: 560px) {
+  .banners {
+    flex-direction: column;
+  }
+}
+
 /* Shortage banner */
 .shortage {
   border: 1px solid var(--border);
@@ -250,7 +267,7 @@
   border-radius: 6px;
 }
 
-/* Kroger real-stock section */
+/* Kroger real-stock section (collapsible, one box per store) */
 .kroger-loading {
   margin-top: 0.75rem;
   color: var(--muted);
@@ -258,24 +275,34 @@
 }
 .kroger {
   margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.kroger-store {
   border: 1px solid #9bd3ad;
   background: #f0faf3;
   border-radius: 12px;
-  padding: 0.9rem 1rem;
+  overflow: hidden;
 }
-.kroger-head {
+.kroger-summary {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.95rem;
 }
-.kroger-head h3 {
-  margin: 0;
-  font-size: 1.02rem;
+.kroger-summary::-webkit-details-marker {
+  display: none;
+}
+.kroger-summary-text {
+  flex: 1;
 }
 .kroger-badge {
   flex: none;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #fff;
@@ -283,47 +310,50 @@
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
 }
-.kroger-store {
-  padding: 0.5rem 0;
-  border-top: 1px solid #cdeed8;
+.kroger-chevron {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--muted);
+  transition: transform 0.15s;
 }
-.kroger-store-name {
-  font-weight: 600;
+.kroger-store[open] .kroger-chevron {
+  transform: rotate(180deg);
+}
+.kroger-body {
+  padding: 0 0.9rem 0.85rem;
 }
 .kroger-store-addr {
   color: var(--muted);
   font-size: 0.85rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
-.kroger-products {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+.kroger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
 }
-.kroger-products li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
+.kroger-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  border-bottom: 1px solid #cdeed8;
 }
-.kroger-prod {
-  flex: 1;
+.kroger-table td {
+  padding: 0.4rem 0.5rem 0.4rem 0;
+  border-bottom: 1px solid #e2f2e8;
+  vertical-align: middle;
 }
-.kroger-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: none;
+.kroger-table tr:last-child td {
+  border-bottom: none;
 }
-.kroger-price {
-  font-weight: 700;
-}
-.kroger-aisle {
-  font-size: 0.76rem;
+.kroger-size {
   color: var(--muted);
 }
 
