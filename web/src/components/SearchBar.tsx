@@ -92,6 +92,15 @@ export default function SearchBar({ onSearch, busy }: Props) {
     }
   };
 
+  const usingCurrentLocation = resolvedLoc?.label === "Current location";
+
+  const clearLocation = () => {
+    setResolvedLoc(null);
+    setZip("");
+    setLocError("");
+    locationRef.current?.focus();
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocError("");
@@ -163,22 +172,34 @@ export default function SearchBar({ onSearch, busy }: Props) {
             type="text"
             inputMode="numeric"
             placeholder="ZIP code"
-            value={resolvedLoc?.label === "Current location" ? "Current location" : zip}
-            readOnly={resolvedLoc?.label === "Current location"}
+            value={usingCurrentLocation ? "Current location" : zip}
+            readOnly={usingCurrentLocation}
             onChange={(e) => {
               setZip(e.target.value);
               setResolvedLoc(null);
             }}
           />
-          <button
-            type="button"
-            className="ghost"
-            onClick={useMyLocation}
-            disabled={locating}
-            title="Use my current location"
-          >
-            {locating ? "…" : "📍"}
-          </button>
+          {usingCurrentLocation ? (
+            <button
+              type="button"
+              className="ghost"
+              onClick={clearLocation}
+              title="Clear location"
+              aria-label="Clear location"
+            >
+              ✕
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ghost"
+              onClick={useMyLocation}
+              disabled={locating}
+              title="Use my current location"
+            >
+              {locating ? "…" : "📍"}
+            </button>
+          )}
         </div>
       </div>
 
