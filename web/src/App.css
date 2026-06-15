@@ -148,9 +148,32 @@
 .suggestions li.suggestions-label:hover {
   background: none;
 }
-.recent-icon {
-  margin-right: 0.4rem;
-  opacity: 0.7;
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.recent-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-remove {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1;
+  padding: 0.15rem 0.25rem;
+  opacity: 0.55;
+}
+.recent-remove:hover {
+  opacity: 1;
+  color: #cf222e;
 }
 
 .form-error,

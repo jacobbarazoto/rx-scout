@@ -1,7 +1,9 @@
-import { Map, AdvancedMarker, Pin, InfoWindow } from "@vis.gl/react-google-maps";
+import { useEffect } from "react";
+import { Map, AdvancedMarker, Pin, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import type { GeoLocation, Pharmacy, PharmacyResult } from "../types";
 import type { KrogerStore } from "../lib/kroger";
 import { AVAILABILITY_META } from "../lib/availability";
+import { distanceMiles } from "../lib/geo";
 import PharmacyContact from "./PharmacyContact";
 
 interface Props {
@@ -12,6 +14,19 @@ interface Props {
   onSelect: (id: string) => void;
   onClose: () => void;
   onTransfer: (p: Pharmacy) => void;
+  /** Explicit search location — pans the map here when it changes (not on user pans). */
+  recenterTo: { lat: number; lng: number };
+  /** Reports the map's center + visible radius after the user pans/zooms. */
+  onViewportChange: (v: { lat: number; lng: number; radiusMeters: number }) => void;
+}
+
+/** Pans the map to an explicit search location when it changes. */
+function Recenter({ target }: { target: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map) map.panTo(target);
+  }, [map, target.lat, target.lng]);
+  return null;
 }
 
 // A Map ID is required for Advanced Markers. Override via VITE_GOOGLE_MAP_ID;
@@ -27,6 +42,8 @@ export default function MapView({
   onSelect,
   onClose,
   onTransfer,
+  recenterTo,
+  onViewportChange,
 }: Props) {
   const selected = pharmacies.find((p) => p.id === selectedId) ?? null;
   const selectedKroger =
@@ -41,7 +58,19 @@ export default function MapView({
         gestureHandling="greedy"
         disableDefaultUI
         clickableIcons={false}
+        onIdle={(ev) => {
+          const map = ev.map;
+          const c = map.getCenter();
+          const b = map.getBounds();
+          if (!c || !b) return;
+          const point = { lat: c.lat(), lng: c.lng() };
+          const ne = b.getNorthEast();
+          const radiusMeters =
+            distanceMiles(point, { lat: ne.lat(), lng: ne.lng() }) * 1609.34;
+          onViewportChange({ ...point, radiusMeters });
+        }}
       >
+        <Recenter target={recenterTo} />
         {pharmacies.map((p) => {
           const meta = AVAILABILITY_META[p.availability.level];
           const isSelected = p.id === selectedId;

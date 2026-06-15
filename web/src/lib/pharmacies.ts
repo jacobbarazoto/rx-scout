@@ -34,8 +34,11 @@ const STREETS = [
  * Find pharmacies near a location. Returns real Places results when the Google
  * Maps JS API (with the Places library) is loaded; otherwise mock data.
  */
-export async function findPharmacies(loc: GeoLocation): Promise<Pharmacy[]> {
-  const real = await tryPlacesSearch(loc);
+export async function findPharmacies(
+  loc: GeoLocation,
+  radiusMeters = 8000,
+): Promise<Pharmacy[]> {
+  const real = await tryPlacesSearch(loc, radiusMeters);
   const pharmacies = real ?? mockPharmaciesNear(loc);
   return pharmacies
     .map((p) => ({ ...p, distanceMiles: distanceMiles(loc, p) }))
@@ -47,11 +50,16 @@ export function placesAvailable(): boolean {
   return Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
 }
 
-async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
+async function tryPlacesSearch(
+  loc: GeoLocation,
+  radiusMeters: number,
+): Promise<Pharmacy[] | null> {
   // Only attempt if the Places library finished loading (APIProvider mounts it).
   const places = (window as Window & { google?: typeof google }).google?.maps?.places;
   if (!places?.Place) return null;
 
+  // Google Places caps Nearby Search radius at 50km.
+  const radius = Math.min(Math.max(radiusMeters, 1000), 50000);
   try {
     const { places: results } = await places.Place.searchNearby({
       fields: [
@@ -63,7 +71,7 @@ async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
         "rating",
         "googleMapsURI",
       ],
-      locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius: 8000 },
+      locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius },
       includedPrimaryTypes: ["pharmacy", "drugstore"],
       maxResultCount: 15,
     });

@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { GeoLocation, Medication } from "../types";
 import { searchMedications } from "../lib/rxnorm";
 import { geocodeZip, geolocate } from "../lib/geo";
-import { addRecentSearch, loadRecentSearches } from "../lib/history";
+import {
+  addRecentSearch,
+  loadRecentSearches,
+  removeRecentSearch,
+  type RecentSearch,
+} from "../lib/history";
 
 interface Props {
   onSearch: (medication: Medication, location: GeoLocation) => void;
@@ -15,7 +20,7 @@ export default function SearchBar({ onSearch, busy }: Props) {
   const [suggestions, setSuggestions] = useState<Medication[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<RecentSearch[]>([]);
   useEffect(() => setRecent(loadRecentSearches()), []);
 
   const [zip, setZip] = useState("");
@@ -50,10 +55,8 @@ export default function SearchBar({ onSearch, busy }: Props) {
   // When the box is empty/short, the dropdown shows recent searches instead of
   // live autocomplete results.
   const recentMode = medText.trim().length < 2;
-  const displayItems: Medication[] = recentMode
-    ? recent.map((n) => ({ id: n, name: n }))
-    : suggestions;
-  const dropdownOpen = showSuggestions && displayItems.length > 0;
+  const navLength = recentMode ? recent.length : suggestions.length;
+  const dropdownOpen = showSuggestions && navLength > 0;
 
   const pickSuggestion = (m: Medication) => {
     setSelectedMed(m);
@@ -62,25 +65,45 @@ export default function SearchBar({ onSearch, busy }: Props) {
     setActiveIndex(-1);
   };
 
+  // Restore a past search into both boxes (medication + location).
+  const pickRecent = (item: RecentSearch) => {
+    setSelectedMed(item.medication);
+    setMedText(item.medication.name);
+    if (item.zip) {
+      setZip(item.zip);
+      setResolvedLoc(null);
+    } else {
+      setResolvedLoc(item.location);
+      setZip("");
+    }
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+  };
+
+  const removeRecent = (index: number) => {
+    setRecent(removeRecentSearch(index));
+    setActiveIndex(-1);
+  };
+
   // Keyboard navigation for the dropdown (recent searches or autocomplete).
   const onMedKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!dropdownOpen) return;
-    const n = displayItems.length;
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setActiveIndex((i) => (i + 1) % n);
+        setActiveIndex((i) => (i + 1) % navLength);
         break;
       case "ArrowUp":
         e.preventDefault();
-        setActiveIndex((i) => (i <= 0 ? n - 1 : i - 1));
+        setActiveIndex((i) => (i <= 0 ? navLength - 1 : i - 1));
         break;
       case "Enter":
         // Only intercept Enter when an item is highlighted; otherwise let the
         // form submit and run the search.
         if (activeIndex >= 0) {
           e.preventDefault();
-          pickSuggestion(displayItems[activeIndex]);
+          if (recentMode) pickRecent(recent[activeIndex]);
+          else pickSuggestion(suggestions[activeIndex]);
         }
         break;
       case "Escape":
@@ -130,7 +153,14 @@ export default function SearchBar({ onSearch, busy }: Props) {
         return;
       }
     }
-    setRecent(addRecentSearch(med.name));
+    // Cache only complete searches (both medication and location resolved).
+    setRecent(
+      addRecentSearch({
+        medication: med,
+        zip: loc.label === "Current location" ? undefined : zip.trim() || undefined,
+        location: loc,
+      }),
+    );
     onSearch(med, loc);
   };
 
@@ -159,21 +189,54 @@ export default function SearchBar({ onSearch, busy }: Props) {
         />
         {dropdownOpen && (
           <ul className="suggestions" role="listbox" id="med-suggestions">
-            {recentMode && <li className="suggestions-label">Recent searches</li>}
-            {displayItems.map((m, i) => (
-              <li
-                key={m.id}
-                id={`med-opt-${i}`}
-                role="option"
-                aria-selected={i === activeIndex}
-                className={i === activeIndex ? "active" : undefined}
-                onMouseEnter={() => setActiveIndex(i)}
-                onMouseDown={() => pickSuggestion(m)}
-              >
-                {recentMode && <span className="recent-icon">🕘</span>}
-                {m.name}
-              </li>
-            ))}
+            {recentMode ? (
+              <>
+                <li className="suggestions-label">Recent searches</li>
+                {recent.map((item, i) => (
+                  <li
+                    key={`${item.medication.name}|${item.zip ?? item.location.label}`}
+                    id={`med-opt-${i}`}
+                    role="option"
+                    aria-selected={i === activeIndex}
+                    className={`recent-item ${i === activeIndex ? "active" : ""}`}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    onMouseDown={() => pickRecent(item)}
+                  >
+                    <span className="recent-text">
+                      {item.medication.name} <span className="dot-sep">•</span>{" "}
+                      {item.zip ?? item.location.label}
+                    </span>
+                    <button
+                      type="button"
+                      className="recent-remove"
+                      aria-label="Remove from history"
+                      title="Remove"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeRecent(i);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </>
+            ) : (
+              suggestions.map((m, i) => (
+                <li
+                  key={m.id}
+                  id={`med-opt-${i}`}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  className={i === activeIndex ? "active" : undefined}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseDown={() => pickSuggestion(m)}
+                >
+                  {m.name}
+                </li>
+              ))
+            )}
           </ul>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   GeoLocation,
   Medication,
@@ -11,6 +11,7 @@ import { getOtcStatus } from "./lib/otc";
 import { getKrogerStock, type KrogerStore } from "./lib/kroger";
 import { findPharmacies, placesAvailable } from "./lib/pharmacies";
 import { simulateAvailability } from "./lib/availability";
+import { distanceMiles } from "./lib/geo";
 import Header from "./components/Header";
 import SearchBar from "./components/SearchBar";
 import ShortageBanner from "./components/ShortageBanner";
@@ -37,6 +38,11 @@ export default function App() {
   const [transferTarget, setTransferTarget] = useState<Pharmacy | null>(null);
   const [krogerStores, setKrogerStores] = useState<KrogerStore[]>([]);
   const [krogerLoading, setKrogerLoading] = useState(false);
+  // Explicit search location — the map pans here on a new search (not on user pans).
+  const [recenterTo, setRecenterTo] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
+  // Tracks the last viewport we fetched for, to skip redundant map-driven refreshes.
+  const lastFetchRef = useRef<{ lat: number; lng: number; radius: number } | null>(null);
+  const refreshTimer = useRef<number | null>(null);
 
   // For OTC drugs, look up real shelf stock at nearby Kroger-family stores.
   useEffect(() => {
@@ -64,6 +70,38 @@ export default function App() {
     );
   };
 
+  // Re-run the pharmacy search for the map's current center + visible radius
+  // when the user pans/zooms. Debounced, and skipped for small moves.
+  const onViewportChange = (v: { lat: number; lng: number; radiusMeters: number }) => {
+    const current = result;
+    if (!current) return;
+    const last = lastFetchRef.current;
+    if (!last) {
+      // First idle after a search: calibrate the baseline viewport, don't refetch.
+      lastFetchRef.current = { lat: v.lat, lng: v.lng, radius: v.radiusMeters };
+      return;
+    }
+    const moved = distanceMiles(last, v);
+    const ratio = v.radiusMeters / (last.radius || v.radiusMeters);
+    if (moved < 0.4 && ratio > 0.75 && ratio < 1.33) return; // negligible change
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = window.setTimeout(async () => {
+      lastFetchRef.current = { lat: v.lat, lng: v.lng, radius: v.radiusMeters };
+      const area: GeoLocation = { lat: v.lat, lng: v.lng, label: "this area" };
+      try {
+        const pharmacies = await findPharmacies(area, v.radiusMeters);
+        const withStock: PharmacyResult[] = pharmacies.map((p) => ({
+          ...p,
+          availability: simulateAvailability(p.id, current.medication.name, current.shortage.inShortage),
+        }));
+        setResult((r) => (r ? { ...r, location: area, pharmacies: withStock } : r));
+        setSelectedId((prev) => (withStock.some((p) => p.id === prev) ? prev : null));
+      } catch {
+        /* leave existing results in place on failure */
+      }
+    }, 500);
+  };
+
   const handleSearch = async (medication: Medication, location: GeoLocation) => {
     setBusy(true);
     setError("");
@@ -83,6 +121,8 @@ export default function App() {
 
       setResult({ medication, location, shortage, pharmacies: withStock, isOtc: otc.isOtc });
       setSelectedId(withStock[0]?.id ?? null);
+      setRecenterTo({ lat: location.lat, lng: location.lng });
+      lastFetchRef.current = null; // first map idle will calibrate the baseline
     } catch (e) {
       setError((e as Error).message || "Something went wrong. Try again.");
     } finally {
@@ -135,6 +175,8 @@ export default function App() {
                   onSelect={setSelectedId}
                   onClose={() => setSelectedId(null)}
                   onTransfer={setTransferTarget}
+                  recenterTo={recenterTo}
+                  onViewportChange={onViewportChange}
                 />
               )}
             </div>

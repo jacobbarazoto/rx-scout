@@ -1,38 +1,53 @@
-// Recent medication searches, persisted in localStorage (most recent first).
-const KEY = "rx-scout:recent-meds";
+// Recent searches (medication + location), persisted in localStorage.
+import type { GeoLocation, Medication } from "../types";
+
+export interface RecentSearch {
+  medication: Medication;
+  /** ZIP the user typed, if any — preferred for display + re-populating. */
+  zip?: string;
+  /** Resolved location at search time (lets us restore current-location searches). */
+  location: GeoLocation;
+}
+
+const KEY = "rx-scout:recent-searches";
 const MAX = 6;
 
-export function loadRecentSearches(): string[] {
+/** Identity for de-duping: same drug + same place. */
+function keyOf(s: RecentSearch): string {
+  return `${s.medication.name.toLowerCase()}|${(s.zip || s.location.label).toLowerCase()}`;
+}
+
+export function loadRecentSearches(): RecentSearch[] {
   try {
     const raw = localStorage.getItem(KEY);
     const list = raw ? JSON.parse(raw) : [];
-    return Array.isArray(list) ? list.filter((x) => typeof x === "string").slice(0, MAX) : [];
+    if (!Array.isArray(list)) return [];
+    return list.filter((s) => s?.medication?.name && s?.location).slice(0, MAX);
   } catch {
     return [];
   }
 }
 
-/** Add a search to the front (de-duped, case-insensitive), return the new list. */
-export function addRecentSearch(name: string): string[] {
-  const trimmed = name.trim();
-  if (!trimmed) return loadRecentSearches();
-  const existing = loadRecentSearches().filter(
-    (n) => n.toLowerCase() !== trimmed.toLowerCase(),
-  );
-  const next = [trimmed, ...existing].slice(0, MAX);
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* ignore quota/availability errors */
-  }
+/** Prepend a search (de-duped, most-recent-first); returns the new list. */
+export function addRecentSearch(item: RecentSearch): RecentSearch[] {
+  const existing = loadRecentSearches().filter((s) => keyOf(s) !== keyOf(item));
+  const next = [item, ...existing].slice(0, MAX);
+  persist(next);
   return next;
 }
 
-export function clearRecentSearches(): string[] {
+/** Remove a single search by index; returns the new list. */
+export function removeRecentSearch(index: number): RecentSearch[] {
+  const list = loadRecentSearches();
+  list.splice(index, 1);
+  persist(list);
+  return list;
+}
+
+function persist(list: RecentSearch[]) {
   try {
-    localStorage.removeItem(KEY);
+    localStorage.setItem(KEY, JSON.stringify(list));
   } catch {
-    /* ignore */
+    /* ignore quota/availability errors */
   }
-  return [];
 }
