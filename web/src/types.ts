@@ -44,6 +44,12 @@ export interface Pharmacy {
   lng: number;
   /** Straight-line distance from the search location, in miles. */
   distanceMiles?: number;
+  /** Contact phone, national format. Real from Places, simulated for mock data. */
+  phone?: string;
+  /** Google rating (0–5), when available. */
+  rating?: number;
+  /** Link to the pharmacy's Google Maps place page, when available. */
+  mapsUri?: string;
 }
 
 export type AvailabilityLevel = "in_stock" | "limited" | "out_of_stock";

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path
+    d="M32 3C19 3 9 13 9 26c0 16 23 35 23 35s23-19 23-35C55 13 45 3 32 3Z"
+    fill="#0b7285"
+  />
+  <circle cx="32" cy="26" r="14" fill="#ffffff" />
+  <text
+    x="32"
+    y="34"
+    font-size="22"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-weight="700"
+    text-anchor="middle"
+    fill="#0b7285"
+  >℞</text>
+</svg>

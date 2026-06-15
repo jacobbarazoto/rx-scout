@@ -1,0 +1,7 @@
+name = "rx-scout-retail"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Secrets (do NOT put values here): set with
+#   npx wrangler secret put KROGER_CLIENT_ID
+#   npx wrangler secret put KROGER_CLIENT_SECRET

@@ -34,8 +34,11 @@ const STREETS = [
  * Find pharmacies near a location. Returns real Places results when the Google
  * Maps JS API (with the Places library) is loaded; otherwise mock data.
  */
-export async function findPharmacies(loc: GeoLocation): Promise<Pharmacy[]> {
-  const real = await tryPlacesSearch(loc);
+export async function findPharmacies(
+  loc: GeoLocation,
+  radiusMeters = 8000,
+): Promise<Pharmacy[]> {
+  const real = await tryPlacesSearch(loc, radiusMeters);
   const pharmacies = real ?? mockPharmaciesNear(loc);
   return pharmacies
     .map((p) => ({ ...p, distanceMiles: distanceMiles(loc, p) }))
@@ -47,15 +50,28 @@ export function placesAvailable(): boolean {
   return Boolean(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
 }
 
-async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
+async function tryPlacesSearch(
+  loc: GeoLocation,
+  radiusMeters: number,
+): Promise<Pharmacy[] | null> {
   // Only attempt if the Places library finished loading (APIProvider mounts it).
   const places = (window as Window & { google?: typeof google }).google?.maps?.places;
   if (!places?.Place) return null;
 
+  // Google Places caps Nearby Search radius at 50km.
+  const radius = Math.min(Math.max(radiusMeters, 1000), 50000);
   try {
     const { places: results } = await places.Place.searchNearby({
-      fields: ["id", "displayName", "formattedAddress", "location"],
-      locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius: 8000 },
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "nationalPhoneNumber",
+        "rating",
+        "googleMapsURI",
+      ],
+      locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius },
       includedPrimaryTypes: ["pharmacy", "drugstore"],
       maxResultCount: 15,
     });
@@ -69,6 +85,9 @@ async function tryPlacesSearch(loc: GeoLocation): Promise<Pharmacy[] | null> {
         address: r.formattedAddress ?? "",
         lat: r.location!.lat(),
         lng: r.location!.lng(),
+        phone: r.nationalPhoneNumber ?? undefined,
+        rating: r.rating ?? undefined,
+        mapsUri: r.googleMapsURI ?? undefined,
       }));
   } catch {
     return null; // Quota/permission/API errors → fall back to mock.
@@ -91,7 +110,18 @@ export function mockPharmaciesNear(loc: GeoLocation, count = 8): Pharmacy[] {
       address: `${streetNo} ${STREETS[i % STREETS.length]}`,
       lat,
       lng,
+      phone: mockPhone(i),
+      rating: Math.round((3.4 + ((i * 7) % 16) / 10) * 10) / 10, // 3.4–4.9
+      mapsUri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
     });
   }
   return out;
+}
+
+/** Deterministic, plausible US phone number for a mock pharmacy. */
+function mockPhone(i: number): string {
+  const area = 200 + ((i * 53) % 700); // 200–899
+  const prefix = 200 + ((i * 97) % 700);
+  const line = (i * 1234 + 5678) % 10000;
+  return `(${area}) ${prefix}-${String(line).padStart(4, "0")}`;
 }
