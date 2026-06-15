@@ -25,12 +25,19 @@ interface Props {
   areaBusy: boolean;
 }
 
-/** Pans the map to an explicit search location when it changes. */
+/**
+ * Pans the map to an explicit search location. Keyed on the object identity so
+ * it re-pans on every new search/reset — even back to the same coordinates the
+ * user has since panned away from.
+ */
 function Recenter({ target }: { target: { lat: number; lng: number } }) {
   const map = useMap();
   useEffect(() => {
-    if (map) map.panTo(target);
-  }, [map, target.lat, target.lng]);
+    if (!map) return;
+    map.panTo(target);
+    map.setZoom(12); // restore the default search zoom
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, target]);
   return null;
 }
 
