@@ -472,6 +472,10 @@
 .pharmacy-more .link:hover {
   text-decoration: underline;
 }
+.pharmacy-more-done {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 
 /* Pharmacy list */
 .pharmacy-list {

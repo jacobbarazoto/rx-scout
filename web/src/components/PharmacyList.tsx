@@ -8,11 +8,24 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onTransfer: (p: Pharmacy) => void;
+  /** Fetch more pharmacies from the area (Text Search). */
+  onLoadMore: () => void;
+  loadingMore: boolean;
+  /** True once a "show more" returned nothing new. */
+  noMore: boolean;
 }
 
 const PAGE = 10;
 
-export default function PharmacyList({ pharmacies, selectedId, onSelect, onTransfer }: Props) {
+export default function PharmacyList({
+  pharmacies,
+  selectedId,
+  onSelect,
+  onTransfer,
+  onLoadMore,
+  loadingMore,
+  noMore,
+}: Props) {
   const [visible, setVisible] = useState(PAGE);
   const sentinelRef = useRef<HTMLLIElement | null>(null);
 
@@ -79,7 +92,8 @@ export default function PharmacyList({ pharmacies, selectedId, onSelect, onTrans
           </li>
         );
       })}
-      {hasMore && (
+      {hasMore ? (
+        // More already-fetched results to reveal — auto-load on scroll.
         <li ref={sentinelRef} className="pharmacy-more">
           <button
             type="button"
@@ -87,6 +101,15 @@ export default function PharmacyList({ pharmacies, selectedId, onSelect, onTrans
             onClick={() => setVisible((v) => Math.min(v + PAGE, pharmacies.length))}
           >
             Show {Math.min(PAGE, pharmacies.length - visible)} more
+          </button>
+        </li>
+      ) : noMore ? (
+        <li className="pharmacy-more pharmacy-more-done">No more pharmacies found nearby.</li>
+      ) : (
+        // All fetched results shown — offer a wider Text Search of the area.
+        <li className="pharmacy-more">
+          <button type="button" className="link" onClick={onLoadMore} disabled={loadingMore}>
+            {loadingMore ? "Searching…" : "Show more from the area"}
           </button>
         </li>
       )}
