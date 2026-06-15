@@ -23,9 +23,9 @@ export default function Header() {
           </svg>
         </span>
         <div>
-          <h1>rx-scout</h1>
+          <h1>Rx Scout</h1>
           <p className="tagline">
-            Find which pharmacies near you are likely to have your prescription.
+            Scout out your prescriptions
           </p>
         </div>
       </div>

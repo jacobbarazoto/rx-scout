@@ -22,6 +22,7 @@ export interface KrogerStore {
   address: string;
   lat?: number | null;
   lng?: number | null;
+  phone?: string | null;
   products: KrogerProduct[];
 }
 

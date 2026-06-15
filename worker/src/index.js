@@ -88,6 +88,7 @@ export default {
               .join(", "),
             lat: store.geolocation?.latitude ?? null,
             lng: store.geolocation?.longitude ?? null,
+            phone: store.phone ?? null,
             products,
           });
         }

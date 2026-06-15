@@ -108,12 +108,33 @@ export default function MapView({
                 <span className="badge" style={{ background: "#1a7f37" }}>
                   Real stock
                 </span>
-                <span className="qty">See the panel above for price &amp; aisle</span>
+                <span className="qty">live price &amp; aisle in the panel above</span>
               </div>
+              <PharmacyContact p={krogerAsPharmacy(selectedKroger)} onTransfer={onTransfer} />
             </div>
           </InfoWindow>
         )}
       </Map>
     </div>
   );
+}
+
+// Adapt a Kroger store into the Pharmacy shape PharmacyContact expects, so its
+// popup matches the pharmacy popup (phone, directions, View on Maps, transfer).
+// Kroger gives a phone but no Google rating, so rating is left off.
+function krogerAsPharmacy(s: KrogerStore): Pharmacy {
+  const digits = (s.phone || "").replace(/\D/g, "");
+  const phone =
+    digits.length === 10
+      ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+      : s.phone || undefined;
+  return {
+    id: s.id ?? "kroger",
+    name: s.name.replace(/^(\S+) - \1/, "$1"),
+    address: s.address,
+    lat: s.lat ?? 0,
+    lng: s.lng ?? 0,
+    phone,
+    mapsUri: `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`,
+  };
 }
