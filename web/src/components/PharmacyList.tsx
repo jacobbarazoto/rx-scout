@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Pharmacy, PharmacyResult } from "../types";
 import { AVAILABILITY_META } from "../lib/availability";
 import PharmacyContact from "./PharmacyContact";
@@ -9,10 +10,42 @@ interface Props {
   onTransfer: (p: Pharmacy) => void;
 }
 
+const PAGE = 10;
+
 export default function PharmacyList({ pharmacies, selectedId, onSelect, onTransfer }: Props) {
+  const [visible, setVisible] = useState(PAGE);
+  const sentinelRef = useRef<HTMLLIElement | null>(null);
+
+  // Reset paging on a new result set.
+  useEffect(() => setVisible(PAGE), [pharmacies]);
+
+  // Make sure a selected pharmacy (e.g. clicked on the map) is revealed.
+  useEffect(() => {
+    if (!selectedId) return;
+    const idx = pharmacies.findIndex((p) => p.id === selectedId);
+    if (idx >= 0) setVisible((v) => Math.max(v, Math.ceil((idx + 1) / PAGE) * PAGE));
+  }, [selectedId, pharmacies]);
+
+  // Infinite scroll: reveal the next page as the sentinel scrolls into view.
+  const hasMore = visible < pharmacies.length;
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!hasMore || !el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible((v) => Math.min(v + PAGE, pharmacies.length));
+        }
+      },
+      { rootMargin: "150px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, pharmacies.length]);
+
   return (
     <ul className="pharmacy-list">
-      {pharmacies.map((p) => {
+      {pharmacies.slice(0, visible).map((p) => {
         const meta = AVAILABILITY_META[p.availability.level];
         const selected = selectedId === p.id;
         return (
@@ -46,6 +79,17 @@ export default function PharmacyList({ pharmacies, selectedId, onSelect, onTrans
           </li>
         );
       })}
+      {hasMore && (
+        <li ref={sentinelRef} className="pharmacy-more">
+          <button
+            type="button"
+            className="link"
+            onClick={() => setVisible((v) => Math.min(v + PAGE, pharmacies.length))}
+          >
+            Show {Math.min(PAGE, pharmacies.length - visible)} more
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

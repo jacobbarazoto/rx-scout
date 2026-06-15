@@ -73,7 +73,7 @@ async function tryPlacesSearch(
       ],
       locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius },
       includedPrimaryTypes: ["pharmacy", "drugstore"],
-      maxResultCount: 15,
+      maxResultCount: 20, // Places API (New) hard cap per call
     });
     if (!results?.length) return null;
 
@@ -95,7 +95,7 @@ async function tryPlacesSearch(
 }
 
 /** Deterministic mock pharmacies clustered around the search location. */
-export function mockPharmaciesNear(loc: GeoLocation, count = 8): Pharmacy[] {
+export function mockPharmaciesNear(loc: GeoLocation, count = 20): Pharmacy[] {
   const out: Pharmacy[] = [];
   for (let i = 0; i < count; i++) {
     // Spread points on a rough spiral so they don't overlap on the map.
