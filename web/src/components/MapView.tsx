@@ -110,7 +110,8 @@ export default function MapView({
                 </span>
                 <span className="qty">live price &amp; aisle in the panel above</span>
               </div>
-              <PharmacyContact p={krogerAsPharmacy(selectedKroger)} onTransfer={onTransfer} />
+              {/* No transfer button — OTC items don't need a prescription transfer. */}
+              <PharmacyContact p={krogerAsPharmacy(selectedKroger)} />
             </div>
           </InfoWindow>
         )}

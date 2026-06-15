@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { GeoLocation, Medication } from "../types";
 import { searchMedications } from "../lib/rxnorm";
 import { geocodeZip, geolocate } from "../lib/geo";
+import { addRecentSearch, loadRecentSearches } from "../lib/history";
 
 interface Props {
   onSearch: (medication: Medication, location: GeoLocation) => void;
@@ -14,6 +15,8 @@ export default function SearchBar({ onSearch, busy }: Props) {
   const [suggestions, setSuggestions] = useState<Medication[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [recent, setRecent] = useState<string[]>([]);
+  useEffect(() => setRecent(loadRecentSearches()), []);
 
   const [zip, setZip] = useState("");
   const [locError, setLocError] = useState("");
@@ -44,6 +47,14 @@ export default function SearchBar({ onSearch, busy }: Props) {
     };
   }, [medText, selectedMed]);
 
+  // When the box is empty/short, the dropdown shows recent searches instead of
+  // live autocomplete results.
+  const recentMode = medText.trim().length < 2;
+  const displayItems: Medication[] = recentMode
+    ? recent.map((n) => ({ id: n, name: n }))
+    : suggestions;
+  const dropdownOpen = showSuggestions && displayItems.length > 0;
+
   const pickSuggestion = (m: Medication) => {
     setSelectedMed(m);
     setMedText(m.name);
@@ -51,24 +62,25 @@ export default function SearchBar({ onSearch, busy }: Props) {
     setActiveIndex(-1);
   };
 
-  // Keyboard navigation for the autocomplete dropdown.
+  // Keyboard navigation for the dropdown (recent searches or autocomplete).
   const onMedKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || suggestions.length === 0) return;
+    if (!dropdownOpen) return;
+    const n = displayItems.length;
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setActiveIndex((i) => (i + 1) % suggestions.length);
+        setActiveIndex((i) => (i + 1) % n);
         break;
       case "ArrowUp":
         e.preventDefault();
-        setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        setActiveIndex((i) => (i <= 0 ? n - 1 : i - 1));
         break;
       case "Enter":
-        // Only intercept Enter when a suggestion is highlighted; otherwise let
-        // the form submit and run the search.
+        // Only intercept Enter when an item is highlighted; otherwise let the
+        // form submit and run the search.
         if (activeIndex >= 0) {
           e.preventDefault();
-          pickSuggestion(suggestions[activeIndex]);
+          pickSuggestion(displayItems[activeIndex]);
         }
         break;
       case "Escape":
@@ -118,6 +130,7 @@ export default function SearchBar({ onSearch, busy }: Props) {
         return;
       }
     }
+    setRecent(addRecentSearch(med.name));
     onSearch(med, loc);
   };
 
@@ -137,16 +150,17 @@ export default function SearchBar({ onSearch, busy }: Props) {
             setSelectedMed(null);
           }}
           onKeyDown={onMedKeyDown}
-          onFocus={() => suggestions.length && setShowSuggestions(true)}
+          onFocus={() => setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           role="combobox"
-          aria-expanded={showSuggestions && suggestions.length > 0}
+          aria-expanded={dropdownOpen}
           aria-controls="med-suggestions"
           aria-activedescendant={activeIndex >= 0 ? `med-opt-${activeIndex}` : undefined}
         />
-        {showSuggestions && suggestions.length > 0 && (
+        {dropdownOpen && (
           <ul className="suggestions" role="listbox" id="med-suggestions">
-            {suggestions.map((m, i) => (
+            {recentMode && <li className="suggestions-label">Recent searches</li>}
+            {displayItems.map((m, i) => (
               <li
                 key={m.id}
                 id={`med-opt-${i}`}
@@ -156,6 +170,7 @@ export default function SearchBar({ onSearch, busy }: Props) {
                 onMouseEnter={() => setActiveIndex(i)}
                 onMouseDown={() => pickSuggestion(m)}
               >
+                {recentMode && <span className="recent-icon">🕘</span>}
                 {m.name}
               </li>
             ))}

@@ -136,6 +136,22 @@
 .suggestions li.active {
   background: #eef6f8;
 }
+.suggestions-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 0.35rem 0.6rem 0.2rem;
+  cursor: default;
+}
+.suggestions li.suggestions-label:hover {
+  background: none;
+}
+.recent-icon {
+  margin-right: 0.4rem;
+  opacity: 0.7;
+}
 
 .form-error,
 .app-error {
