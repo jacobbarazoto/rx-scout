@@ -18,6 +18,11 @@ interface Props {
   recenterTo: { lat: number; lng: number };
   /** Reports the map's center + visible radius after the user pans/zooms. */
   onViewportChange: (v: { lat: number; lng: number; radiusMeters: number }) => void;
+  /** Whether to show the "Search this area" button (viewport moved). */
+  showSearchArea: boolean;
+  /** Re-run the search for the current viewport. */
+  onSearchArea: () => void;
+  areaBusy: boolean;
 }
 
 /** Pans the map to an explicit search location when it changes. */
@@ -44,6 +49,9 @@ export default function MapView({
   onTransfer,
   recenterTo,
   onViewportChange,
+  showSearchArea,
+  onSearchArea,
+  areaBusy,
 }: Props) {
   const selected = pharmacies.find((p) => p.id === selectedId) ?? null;
   const selectedKroger =
@@ -51,6 +59,11 @@ export default function MapView({
 
   return (
     <div className="map-wrap" id="rx-map">
+      {showSearchArea && (
+        <button className="search-area-btn" onClick={onSearchArea} disabled={areaBusy}>
+          {areaBusy ? "Searching…" : "🔍 Search this area"}
+        </button>
+      )}
       <Map
         mapId={MAP_ID}
         defaultCenter={{ lat: center.lat, lng: center.lng }}
