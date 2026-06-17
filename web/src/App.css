@@ -455,6 +455,28 @@
   color: var(--muted);
 }
 
+/* Pharmacy list — "show more" / infinite-scroll sentinel */
+.pharmacy-more {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0;
+}
+.pharmacy-more .link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.pharmacy-more .link:hover {
+  text-decoration: underline;
+}
+.pharmacy-more-done {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 /* Pharmacy list */
 .pharmacy-list {
   list-style: none;

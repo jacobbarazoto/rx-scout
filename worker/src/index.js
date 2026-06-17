@@ -9,6 +9,8 @@ const KROGER = "https://api.kroger.com/v1";
 
 // Only let the rx-scout app (and local dev) use this proxy from the browser.
 const ALLOWED_ORIGINS = new Set([
+  "https://rx-scout.org",
+  "https://www.rx-scout.org",
   "https://rx-scout.web.app",
   "https://rx-scout.firebaseapp.com",
   "http://localhost:5173",

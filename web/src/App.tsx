@@ -9,7 +9,7 @@ import type {
 import { getShortageStatus } from "./lib/openfda";
 import { getOtcStatus } from "./lib/otc";
 import { getKrogerStock, type KrogerStore } from "./lib/kroger";
-import { findPharmacies, placesAvailable } from "./lib/pharmacies";
+import { findPharmacies, placesAvailable, searchMorePharmacies } from "./lib/pharmacies";
 import { simulateAvailability } from "./lib/availability";
 import { distanceMiles } from "./lib/geo";
 import Header from "./components/Header";
@@ -44,9 +44,13 @@ export default function App() {
   const [originLocation, setOriginLocation] = useState<GeoLocation | null>(null);
   const [showSearchArea, setShowSearchArea] = useState(false);
   const [areaBusy, setAreaBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [noMore, setNoMore] = useState(false);
   // Baseline viewport we last fetched for, and the latest reported map viewport.
   const lastFetchRef = useRef<{ lat: number; lng: number; radius: number } | null>(null);
   const viewportRef = useRef<{ lat: number; lng: number; radiusMeters: number } | null>(null);
+  // Radius used for the current result set (for "show more" Text Search).
+  const searchRadiusRef = useRef(8000);
 
   // For OTC drugs, look up real shelf stock at nearby Kroger-family stores.
   useEffect(() => {
@@ -105,7 +109,9 @@ export default function App() {
         availability: simulateAvailability(p.id, current.medication.name, current.shortage.inShortage),
       }));
       lastFetchRef.current = { lat: v.lat, lng: v.lng, radius: v.radiusMeters };
+      searchRadiusRef.current = v.radiusMeters;
       setShowSearchArea(false);
+      setNoMore(false);
       setResult((r) => (r ? { ...r, location: area, pharmacies: withStock } : r));
       setSelectedId((prev) => (withStock.some((p) => p.id === prev) ? prev : null));
     } catch {
@@ -118,6 +124,38 @@ export default function App() {
   // Re-run the original entered search (location + medication).
   const resetToOrigin = () => {
     if (originLocation && result) handleSearch(result.medication, originLocation);
+  };
+
+  // Best-effort "show more": Text Search the area for pharmacies beyond the
+  // Nearby Search cap, append the new ones (deduped).
+  const loadMorePharmacies = async () => {
+    const current = result;
+    if (!current) return;
+    setLoadingMore(true);
+    try {
+      const existing = new Set(current.pharmacies.map((p) => p.id));
+      const more = await searchMorePharmacies(current.location, searchRadiusRef.current, existing);
+      if (!more.length) {
+        setNoMore(true);
+        return;
+      }
+      const withStock: PharmacyResult[] = more.map((p) => ({
+        ...p,
+        availability: simulateAvailability(p.id, current.medication.name, current.shortage.inShortage),
+      }));
+      setResult((r) =>
+        r
+          ? {
+              ...r,
+              pharmacies: [...r.pharmacies, ...withStock].sort(
+                (a, b) => (a.distanceMiles ?? 0) - (b.distanceMiles ?? 0),
+              ),
+            }
+          : r,
+      );
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handleSearch = async (medication: Medication, location: GeoLocation) => {
@@ -142,6 +180,8 @@ export default function App() {
       setRecenterTo({ lat: location.lat, lng: location.lng });
       setOriginLocation(location);
       setShowSearchArea(false);
+      setNoMore(false);
+      searchRadiusRef.current = 8000;
       lastFetchRef.current = null; // first map idle will calibrate the baseline
     } catch (e) {
       setError((e as Error).message || "Something went wrong. Try again.");
@@ -190,6 +230,9 @@ export default function App() {
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 onTransfer={setTransferTarget}
+                onLoadMore={loadMorePharmacies}
+                loadingMore={loadingMore}
+                noMore={noMore}
               />
               {placesAvailable() && (
                 <MapView

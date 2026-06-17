@@ -73,7 +73,7 @@ async function tryPlacesSearch(
       ],
       locationRestriction: { center: { lat: loc.lat, lng: loc.lng }, radius },
       includedPrimaryTypes: ["pharmacy", "drugstore"],
-      maxResultCount: 15,
+      maxResultCount: 20, // Places API (New) hard cap per call
     });
     if (!results?.length) return null;
 
@@ -94,8 +94,66 @@ async function tryPlacesSearch(
   }
 }
 
+/**
+ * Fetch additional pharmacies in the area via Text Search, excluding ids we
+ * already have. Best-effort "show more" past Nearby Search's 20-result cap.
+ * (The JS SDK doesn't expose a page token, so this is a broader query rather
+ * than a true next page.)
+ */
+export async function searchMorePharmacies(
+  loc: GeoLocation,
+  radiusMeters: number,
+  excludeIds: Set<string>,
+): Promise<Pharmacy[]> {
+  const places = (window as Window & { google?: typeof google }).google?.maps?.places;
+  if (!places?.Place) return mockMorePharmacies(loc, excludeIds);
+
+  const radius = Math.min(Math.max(radiusMeters, 1000), 50000);
+  try {
+    const { places: results } = await places.Place.searchByText({
+      textQuery: "pharmacy",
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "nationalPhoneNumber",
+        "rating",
+        "googleMapsURI",
+      ],
+      locationBias: { center: { lat: loc.lat, lng: loc.lng }, radius },
+      includedType: "pharmacy",
+      maxResultCount: 20,
+    });
+    return (results ?? [])
+      .filter((r) => r.location && !excludeIds.has(r.id ?? ""))
+      .map((r) => ({
+        id: r.id ?? `${r.displayName}`,
+        name: r.displayName ?? "Pharmacy",
+        address: r.formattedAddress ?? "",
+        lat: r.location!.lat(),
+        lng: r.location!.lng(),
+        phone: r.nationalPhoneNumber ?? undefined,
+        rating: r.rating ?? undefined,
+        mapsUri: r.googleMapsURI ?? undefined,
+      }))
+      .map((p) => ({ ...p, distanceMiles: distanceMiles(loc, p) }))
+      .sort((a, b) => (a.distanceMiles ?? 0) - (b.distanceMiles ?? 0));
+  } catch {
+    return [];
+  }
+}
+
+/** Mock "show more": a second batch at larger radii (dev / no key). */
+function mockMorePharmacies(loc: GeoLocation, excludeIds: Set<string>): Pharmacy[] {
+  return mockPharmaciesNear(loc, 32)
+    .filter((p) => !excludeIds.has(p.id))
+    .slice(0, 12)
+    .map((p) => ({ ...p, distanceMiles: distanceMiles(loc, p) }));
+}
+
 /** Deterministic mock pharmacies clustered around the search location. */
-export function mockPharmaciesNear(loc: GeoLocation, count = 8): Pharmacy[] {
+export function mockPharmaciesNear(loc: GeoLocation, count = 20): Pharmacy[] {
   const out: Pharmacy[] = [];
   for (let i = 0; i < count; i++) {
     // Spread points on a rough spiral so they don't overlap on the map.
